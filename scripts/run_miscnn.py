@@ -30,6 +30,8 @@ from miscnn.evaluation.cross_validation import cross_validation
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TensorBoard, \
                                        EarlyStopping, CSVLogger, ModelCheckpoint
 from miscnn.evaluation.cross_validation import run_fold, load_disk2fold
+from miscnn.neural_network.metrics import dice_coefficient_loss
+
 import argparse
 import os
 
@@ -53,7 +55,7 @@ fold_subdir = os.path.join("evaluation", "fold_" + str(fold))
 #-----------------------------------------------------#
 # Initialize Data IO Interface for NIfTI data
 ## We are using 4 classes due to [background, lung_left, lung_right, covid-19]
-interface = NIFTI_interface(channels=1, classes=4)
+interface = NIFTI_interface(channels=1, classes=2)
 
 # Create Data IO object to load and write samples in the file structure
 data_io = Data_IO(interface, input_path="data", delete_batchDir=False)
@@ -93,7 +95,7 @@ unet_standard = Architecture(depth=4, activation="softmax",
 
 # Create the Neural Network model
 model = Neural_Network(preprocessor=pp, architecture=unet_standard,
-                       loss=tversky_crossentropy,
+                       loss=dice_coefficient_loss,
                        metrics=[tversky_loss, dice_soft, dice_crossentropy],
                        batch_queue_size=3, workers=3, learninig_rate=0.001)
 
@@ -114,7 +116,7 @@ cb_mc = ModelCheckpoint(os.path.join(fold_subdir, "model.best.hdf5"),
 #          Run Pipeline for provided CV Fold          #
 #-----------------------------------------------------#
 # Run pipeline for cross-validation fold
-run_fold(fold, model, epochs=1000, iterations=150, evaluation_path="evaluation",
+run_fold(fold, model, epochs=50, iterations=150, evaluation_path="evaluation",
          draw_figures=True, callbacks=[cb_lr, cb_es, cb_tb, cb_cl, cb_mc],
          save_models=False)
 
